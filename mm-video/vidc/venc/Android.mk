@@ -48,14 +48,10 @@ libmm-venc-def += -D_ANDROID_ICS_
 
 include $(CLEAR_VARS)
 
-ifeq ($(TARGET_QCOM_DISPLAY_VARIANT),caf)
-DISPLAY := display-caf
+ifneq ($(TARGET_QCOM_DISPLAY_VARIANT),)
+PLATFORM := .
 else
-ifeq ($(TARGET_QCOM_DISPLAY_VARIANT),legacy)
-DISPLAY := display-legacy
-else
-DISPLAY := display
-endif
+PLATFORM := $(TARGET_BOARD_PLATFORM)
 endif
 
 libmm-venc-inc      := bionic/libc/include
@@ -65,11 +61,12 @@ libmm-venc-inc      += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 libmm-venc-inc      += $(OMX_VIDEO_PATH)/vidc/common/inc
 libmm-venc-inc      += hardware/qcom/media-legacy/mm-core/inc
 libmm-venc-inc      += hardware/qcom/media-legacy/libstagefrighthw
-libmm-venc-inc      += hardware/qcom/$(DISPLAY)/libgralloc
+libmm-venc-inc      += $(call project-path-for,qcom-display)/$(PLATFORM)/libgralloc
+libmm-venc-inc      += hardware/libhardware/include/hardware/
 libmm-venc-inc      += frameworks/native/include/media/hardware
 libmm-venc-inc      += frameworks/native/include/media/openmax
 libmm-venc-inc      += hardware/qcom/media-legacy/libc2dcolorconvert
-libmm-venc-inc      += hardware/qcom/$(DISPLAY)/libcopybit
+libmm-venc-inc      += $(call project-path-for,qcom-display)/$(PLATFORM)/libcopybit
 libmm-venc-inc      += frameworks/av/include/media/stagefright
 
 
@@ -81,7 +78,7 @@ LOCAL_C_INCLUDES                := $(libmm-venc-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 LOCAL_PRELINK_MODULE      := false
 LOCAL_SHARED_LIBRARIES    := liblog libutils libbinder libcutils \
-                             libc2dcolorconvert libdl
+                             libc2dcolorconvert libdl  libhardware
 
 LOCAL_SRC_FILES   := src/omx_video_base.cpp
 LOCAL_SRC_FILES   += src/omx_video_encoder.cpp
@@ -102,14 +99,10 @@ include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
 
-ifeq ($(TARGET_QCOM_DISPLAY_VARIANT),caf)
-DISPLAY := display-caf
+ifneq ($(TARGET_QCOM_DISPLAY_VARIANT),)
+PLATFORM := .
 else
-ifeq ($(TARGET_QCOM_DISPLAY_VARIANT),legacy)
-DISPLAY := display-legacy
-else
-DISPLAY := display/$(TARGET_BOARD_PLATFORM)
-endif
+PLATFORM := $(TARGET_BOARD_PLATFORM)
 endif
 
 mm-venc-test720p-inc            := $(TARGET_OUT_HEADERS)/mm-core
@@ -117,7 +110,7 @@ mm-venc-test720p-inc            += $(LOCAL_PATH)/inc
 mm-venc-test720p-inc            += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 mm-venc-test720p-inc            += $(OMX_VIDEO_PATH)/vidc/common/inc
 mm-venc-test720p-inc            += hardware/qcom/media-legacy/mm-core/inc
-mm-venc-test720p-inc            += hardware/qcom/$(DISPLAY)/libgralloc
+mm-venc-test720p-inc            += $(call project-path-for,qcom-display)/$(PLATFORM)/libgralloc
 
 LOCAL_MODULE                    := mm-venc-omx-test720p
 LOCAL_MODULE_TAGS               := debug

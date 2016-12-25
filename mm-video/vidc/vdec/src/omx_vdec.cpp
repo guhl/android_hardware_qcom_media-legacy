@@ -48,6 +48,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "omx_vdec.h"
 #include <fcntl.h>
 #include <limits.h>
+#include <QServiceUtils.h>
 
 #ifndef _ANDROID_
 #include <sys/ioctl.h>
@@ -6408,6 +6409,7 @@ OMX_ERRORTYPE  omx_vdec::component_deinit(OMX_IN OMX_HANDLETYPE hComp)
         for (i=0; i < drv_ctx.op_buf.actualcount; i++ )
         {
           free_output_buffer (&m_out_mem_ptr[i]);
+          client_buffers.free_output_buffer (&client_buffers.m_out_mem_ptr_client[i]);
 #ifdef _ANDROID_ICS_
         if (m_enable_android_native_buffers)
         {
@@ -10154,9 +10156,10 @@ bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
     return false;
   }
   c2d.close();
+
   status = c2d.open(omx->drv_ctx.video_resolution.frame_height,
                     omx->drv_ctx.video_resolution.frame_width,
-                    YCbCr420Tile,YCbCr420P);
+                    YCbCr420Tile,YCbCr420P, 0);
   if (status) {
     status = c2d.get_buffer_size(C2D_INPUT,src_size);
     if (status)
@@ -10503,24 +10506,17 @@ bool omx_vdec::allocate_color_convert_buf::get_color_format(OMX_COLOR_FORMATTYPE
 int omx_vdec::secureDisplay(int mode) {
 
     sp<IServiceManager> sm = defaultServiceManager();
-    sp<qService::IQService> displayBinder =
-        interface_cast<qService::IQService>(sm->getService(String16("display.qservice")));
 
-    if (displayBinder != NULL) {
-        pthread_mutex_lock(&m_secure_display_lock);
-        if (m_secure_display == 0) {
-            displayBinder->securing(mode);
-            DEBUG_PRINT_HIGH("secureDisplay: %s",
-                    (mode == qService::IQService::END)?"END":"START");
-        }
-        if (mode == qService::IQService::END) {
-            ++m_secure_display;
-        }
-        pthread_mutex_unlock(&m_secure_display_lock);
+    pthread_mutex_lock(&m_secure_display_lock);
+    if (m_secure_display == 0) {
+        securing(mode);
+        DEBUG_PRINT_HIGH("secureDisplay: %s",
+            (mode == qService::IQService::END)?"END":"START");
     }
-    else {
-        DEBUG_PRINT_ERROR("secureDisplay(%d) display.qservice unavailable", mode);
+    if (mode == qService::IQService::END) {
+        ++m_secure_display;
     }
+    pthread_mutex_unlock(&m_secure_display_lock);
     return 0;
 }
 
@@ -10530,21 +10526,15 @@ int omx_vdec::unsecureDisplay(int mode) {
     }
 
     sp<IServiceManager> sm = defaultServiceManager();
-    sp<qService::IQService> displayBinder =
-        interface_cast<qService::IQService>(sm->getService(String16("display.qservice")));
 
     pthread_mutex_lock(&m_secure_display_lock);
-    if (displayBinder != NULL) {
-        if (m_secure_display == 1) {
-            displayBinder->unsecuring(mode);
-            DEBUG_PRINT_HIGH("unsecureDisplay: %s",
-                (mode == qService::IQService::END)?"END":"START");
-        }
-        if (mode == qService::IQService::END) {
-            --m_secure_display;
-        }
-    } else {
-        DEBUG_PRINT_ERROR("unsecureDisplay(%d) display.qservice unavailable", mode);
+    if (m_secure_display == 1) {
+        unsecuring(mode);
+        DEBUG_PRINT_HIGH("unsecureDisplay: %s",
+            (mode == qService::IQService::END)?"END":"START");
+    }
+    if (mode == qService::IQService::END) {
+        --m_secure_display;
     }
     pthread_mutex_unlock(&m_secure_display_lock);
 
